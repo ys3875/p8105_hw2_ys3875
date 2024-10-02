@@ -1,0 +1,6 @@
+Q1.
+```{r}
+library(readr)
+NYC_Transit_Subway_Entrance_And_Exit_Data <- read_csv("NYC_Transit_Subway_Entrance_And_Exit_Data.csv")
+```
+
