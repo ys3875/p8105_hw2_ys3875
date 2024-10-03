@@ -1,6 +1,107 @@
-Q1.
-```{r}
-library(readr)
-NYC_Transit_Subway_Entrance_And_Exit_Data <- read_csv("NYC_Transit_Subway_Entrance_And_Exit_Data.csv")
+---
+title: "p8105_hw_ys3875"
+author: "Yanhao Shen"
+date: '`10/2/2024'
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readxl)
+library(dplyr)
+library(janitor)
+library(tidyverse)
 ```
 
+
+
+Q2.
+
+```{r}
+MTW <- read_excel("202409 Trash Wheel Collection Data.xlsx", sheet = "Mr. Trash Wheel") |>
+  janitor::clean_names() |>
+  na.omit(dumpster) |>
+  mutate(sports_balls = as.integer(round(sports_balls))) |>
+  mutate(source = 'Mr. Trash Wheel', year=as.character(year))
+
+PTW <- read_excel("202409 Trash Wheel Collection Data.xlsx", sheet = "Professor Trash Wheel") |>
+  janitor::clean_names() |>
+  na.omit(dumpster) |>
+  mutate(source = 'Professor Trash Wheel', year=as.character(year))
+
+GTW <- read_excel("202409 Trash Wheel Collection Data.xlsx", sheet = "Gwynnda Trash Wheel") |>
+  janitor::clean_names() |>
+  na.omit(dumpster) |>
+  mutate(source = 'Gwynnda Trash Wheel', year=as.character(year))
+
+TW_data <- bind_rows(MTW, PTW, GTW)
+view(TW_data)
+```
+
+the TW_data is the combiantion of datas from three sheets. There are `r nrow(TW_data)` rows/observations and `r ncol(TW_data)` columns. For example, in 2017/1/02 dumpster 1 from Professor Trash Wheel, we can see from the data that they collect 1.79 tons of trash with the volumn of yard as 15. This gives 29.8333 powers for home. The total weight of trash collect by Professor Trash Wheel is shown as below
+
+```{r}
+TW_data |>
+  filter(source == 'Professor Trash Wheel') |>
+  summarise(total=sum(weight_tons, na.rm = TRUE))
+```
+
+the total number of cigarette butts collected by Gwynnda in June of 2022 is shown as below
+
+```{r}
+TW_data |>
+  filter(source == 'Gwynnda Trash Wheel', year=='2022' , month == 'june') |>
+  summarise(ntotal=sum(cigarette_butts, na.rm = TRUE))
+```
+
+Q3.
+
+```{r}
+bakers <- read_csv("gbb_datasets/bakers.csv") |>
+  janitor::clean_names()|>
+  rename(baker=baker_name)
+bakes <- read_csv("gbb_datasets/bakes.csv") |>
+  janitor::clean_names() 
+results <- read_csv("gbb_datasets/results.csv", skip = 2, col_names = TRUE) |>
+  janitor::clean_names()
+
+bakersbake <- anti_join(bakers, bakes, by = c('baker','series'))
+bakeresults <- anti_join(bakers, results, by=c('baker','series'))
+bakers_bakes <-left_join(bakes, bakers, by=c('baker','series'))
+finaldata <- left_join(bakers_bakes, results, by = c('baker', 'episode', 'series')) |>
+  select(series, episode, baker, everything()) |>
+  arrange(baker,series, episode)
+write_csv(finaldata,'gbb_datasets/finaldata.csv')
+```
+
+I use janitor::clean_names() to standardise the name, change baker_name in bakers to baker to match with the rest two datasets. I use anti_join function to check if ant bakers are missing across the datasets, then i use left_join function to merge the datasets by baker, series, and episode, I also reorganized the data using arrange function. The final data is the clearer way to view three datasets into a single dataset.
+
+```{r}
+finaldata |>
+  filter(series>=5 & series <=10, result %in%  c('STAR BAKER', 'WINNER')) |>
+  select(baker, series, episode,result) |>
+  arrange(series, episode)
+
+```
+
+Candice is the predictable winner in series 7 because she won 3 times which is the most. For episode 5, Richard won 5 times but the winner is Nancy, which is a surprise for Nancy.
+
+```{r}
+viewers <- read_csv("gbb_datasets/viewers.csv") |>
+  janitor::clean_names() |>
+  pivot_longer(cols = starts_with('series'),
+               names_to = 'series',
+               names_prefix = 'series_',
+               values_to = 'viewership')
+head(viewers,10)
+
+avg <- viewers |>
+  filter(series %in% c(1,5)) |>
+  group_by(series) |>
+  summarise(avg=mean(viewership,na.rm = TRUE))
+print(avg)
+```
+
+We can see the average viewership in season 1 is 2.77 and in season 5 is 10.0393
